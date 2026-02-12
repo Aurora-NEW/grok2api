@@ -84,6 +84,13 @@ class ModelService:
             display_name="GROK-4-THINKING",
         ),
         ModelInfo(
+            model_id="grok-4-fast",
+            grok_model="grok-4",
+            model_mode="MODEL_MODE_FAST",
+            cost=Cost.LOW,
+            display_name="GROK-4-FAST",
+        ),
+        ModelInfo(
             model_id="grok-4-heavy",
             grok_model="grok-4",
             model_mode="MODEL_MODE_HEAVY",

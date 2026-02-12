@@ -91,12 +91,14 @@ class StreamProcessor(BaseProcessor):
 
         return "".join(result)
 
-    def _sse(self, content: str = "", role: str = None, finish: str = None) -> str:
+    def _sse(self, content: str = "", role: str = None, finish: str = None, reasoning_content: str = "") -> str:
         """构建 SSE 响应"""
         delta = {}
         if role:
             delta["role"] = role
             delta["content"] = ""
+        elif reasoning_content:
+            delta["reasoning_content"] = reasoning_content
         elif content:
             delta["content"] = content
 
@@ -142,23 +144,15 @@ class StreamProcessor(BaseProcessor):
                 # 图像生成进度
                 if img := resp.get("streamingImageGenerationResponse"):
                     if self.show_think:
-                        if not self.think_opened:
-                            yield self._sse("<think>\n")
-                            self.think_opened = True
                         idx = img.get("imageIndex", 0) + 1
                         progress = img.get("progress", 0)
                         yield self._sse(
-                            f"正在生成第{idx}张图片中，当前进度{progress}%\n"
+                            reasoning_content=f"正在生成第{idx}张图片中，当前进度{progress}%\n"
                         )
                     continue
 
                 # modelResponse
                 if mr := resp.get("modelResponse"):
-                    if self.think_opened and self.show_think:
-                        if msg := mr.get("message"):
-                            yield self._sse(msg + "\n")
-                        yield self._sse("</think>\n")
-                        self.think_opened = False
 
                     # 处理生成的图片
                     for url in _collect_image_urls(mr):
@@ -197,12 +191,14 @@ class StreamProcessor(BaseProcessor):
                 # 普通 token
                 if (token := resp.get("token")) is not None:
                     if token:
-                        filtered = self._filter_token(token)
-                        if filtered:
-                            yield self._sse(filtered)
+                        is_thinking = resp.get("isThinking", False)
+                        if is_thinking and self.show_think:
+                            yield self._sse(reasoning_content=token)
+                        elif not is_thinking:
+                            filtered = self._filter_token(token)
+                            if filtered:
+                                yield self._sse(filtered)
 
-            if self.think_opened:
-                yield self._sse("</think>\n")
             yield self._sse(finish="stop")
             yield "data: [DONE]\n\n"
         except asyncio.CancelledError:
