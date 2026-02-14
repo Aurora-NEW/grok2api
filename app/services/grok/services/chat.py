@@ -111,10 +111,34 @@ class MessageExtractor:
             None,
         )
 
+        # 只有一条消息（无历史），直接返回
+        if len(extracted) <= 1:
+            for item in extracted:
+                texts.append(item["text"])
+            return "\n\n".join(texts), attachments
+
+        # 多轮对话：分离历史和当前问题
+        history_parts = []
+        current_question = ""
+        max_history_len = 800  # 历史中每条消息最大字符数
+
         for i, item in enumerate(extracted):
             role = item["role"] or "user"
             text = item["text"]
-            texts.append(text if i == last_user_index else f"{role}: {text}")
+
+            if i == last_user_index:
+                current_question = text
+            else:
+                # 截断过长的历史消息（尤其是 assistant 回复）
+                if role == "assistant" and len(text) > max_history_len:
+                    text = text[:max_history_len] + "..."
+                history_parts.append(f"{role}: {text}")
+
+        if history_parts:
+            history = "\n\n".join(history_parts)
+            texts.append(f"[对话历史]\n{history}\n\n[当前问题]\n{current_question}")
+        else:
+            texts.append(current_question)
 
         return "\n\n".join(texts), attachments
 
