@@ -1,0 +1,12 @@
+services:
+  grok2api:
+    container_name: grok2api-v3
+    volumes:
+      - "./index.production.html:/app/frontend/dist/index.html:ro"
+      - "./frontend/public/creative-console-chat-defaults-v1.js:/app/frontend/dist/creative-console-chat-defaults-v1.js:ro"
+      - "./frontend.production/index-search-defaults-v1-20260814.js:/app/frontend/dist/assets/index-search-defaults-v1-20260814.js:ro"
+      - "./frontend.production/creative-console-search-defaults-v1-20260814.js:/app/frontend/dist/assets/creative-console-search-defaults-v1-20260814.js:ro"
+      - "./frontend.production/index-chat-defaults-v2-20260814.js:/app/frontend/dist/assets/index-chat-defaults-v2-20260814.js:ro"
+      - "./frontend.production/creative-console-chat-defaults-v2-20260814.js:/app/frontend/dist/assets/creative-console-chat-defaults-v2-20260814.js:ro"
+      - "./frontend.production/index-DVIk9Mqh.js:/app/frontend/dist/assets/index-DVIk9Mqh.js:ro"
+      - "./frontend.production/index-entry-refresh-v3-20260814.js:/app/frontend/dist/assets/index-entry-refresh-v3-20260814.js:ro"

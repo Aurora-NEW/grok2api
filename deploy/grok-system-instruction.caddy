@@ -1,0 +1,19 @@
+# Place these directives inside the grok2api site block after its auth map.
+@system_instruction_requests {
+	method POST
+	path /v1/chat/completions /v1/responses /v1/messages
+}
+
+handle @system_instruction_requests {
+	reverse_proxy 127.0.0.1:8001 {
+		header_up Authorization {grok2api_upstream_authorization}
+		flush_interval -1
+	}
+}
+
+handle {
+	reverse_proxy 127.0.0.1:8000 {
+		header_up Authorization {grok2api_upstream_authorization}
+		flush_interval -1
+	}
+}
