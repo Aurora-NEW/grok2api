@@ -39,6 +39,7 @@ import {
   type VideoStatus,
   type VoiceInfo,
 } from "@/features/creative-console/creative-console-api";
+import { createCreativeChatDefaults, withCreativeChatDefaults } from "@/features/creative-console/creative-console-defaults";
 import { getClientKeySecret, listClientKeys, type ClientKeyDTO } from "@/features/client-keys/client-keys-api";
 import { importVideoInputFromURL, uploadMediaInput } from "@/features/media/media-api";
 import { PageHeader } from "@/shared/components/page-header";
@@ -192,16 +193,6 @@ export function CreativeConsolePage() {
   return (
     <div className="flex h-[calc(100dvh-5rem)] min-h-[36rem] flex-col gap-5 overflow-hidden">
       <PageHeader title={t("creativeConsole.title")} description={t("creativeConsole.description")} />
-
-      <aside className="flex shrink-0 flex-col gap-2 rounded-lg bg-secondary/45 px-4 py-2.5 text-xs leading-5 text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <Sparkle className="size-4 shrink-0 text-foreground/70" />
-          <p>{t("creativeConsole.promotion", { product: "DEEIX Chat" })}</p>
-        </div>
-        <a className="inline-flex shrink-0 items-center gap-1.5 self-end font-medium text-foreground hover:underline sm:self-auto" href="https://github.com/DEEIX-AI/DEEIX-Chat" target="_blank" rel="noopener noreferrer">
-          {t("creativeConsole.promotionAction")}<ExternalLink className="size-3.5" />
-        </a>
-      </aside>
 
       <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="flex min-h-9 shrink-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -613,6 +604,9 @@ function ChatPanel({ apiKey, model, modelOptions, onModelChange, storageScope, t
     setSessionCreatedAt(blank.createdAt);
     setMessages([]);
     setPromptCacheKey(blank.promptCacheKey);
+    setReasoningEffort(blank.reasoningEffort);
+    setWebSearch(blank.webSearch);
+    setXSearch(blank.xSearch);
     setPrompt("");
     clearEditState();
     setPendingTruncate(null);
@@ -675,9 +669,10 @@ function ChatPanel({ apiKey, model, modelOptions, onModelChange, storageScope, t
     setSessionCreatedAt(target.createdAt);
     setMessages(target.messages);
     setPromptCacheKey(target.promptCacheKey || createCreativeCacheKey());
-    setReasoningEffort(target.reasoningEffort);
-    setWebSearch(target.webSearch);
-    setXSearch(target.xSearch);
+    const defaults = createCreativeChatDefaults();
+    setReasoningEffort(defaults.reasoningEffort);
+    setWebSearch(defaults.webSearch);
+    setXSearch(defaults.xSearch);
     setPrompt("");
     clearEditState();
     setPendingTruncate(null);
@@ -1789,18 +1784,15 @@ function currentTimestamp(): number {
 
 function createBlankChatSession(model: string): ChatSession {
   const now = Date.now();
-  return {
+  return withCreativeChatDefaults({
     id: createCreativeMessageId(),
     title: "",
     createdAt: now,
     updatedAt: now,
     model,
     promptCacheKey: createCreativeCacheKey(),
-    reasoningEffort: "auto",
-    webSearch: false,
-    xSearch: false,
     messages: [],
-  };
+  });
 }
 
 function createChatSessionTitle(messages: ConversationMessage[]): string {
@@ -1860,18 +1852,15 @@ function parseChatSession(value: unknown): ChatSession[] {
   const now = Date.now();
   const createdAt = finiteTimestamp(value.createdAt) ?? now;
   const updatedAt = finiteTimestamp(value.updatedAt) ?? createdAt;
-  return [{
+  return [withCreativeChatDefaults({
     id: value.id,
     title: typeof value.title === "string" && value.title.trim() ? value.title.trim() : createChatSessionTitle(messages),
     createdAt,
     updatedAt,
     model: typeof value.model === "string" ? value.model : "",
     promptCacheKey: typeof value.promptCacheKey === "string" && value.promptCacheKey ? value.promptCacheKey : createCreativeCacheKey(),
-    reasoningEffort: isReasoningEffort(value.reasoningEffort) ? value.reasoningEffort : "auto",
-    webSearch: value.webSearch === true,
-    xSearch: value.xSearch === true,
     messages,
-  }];
+  })];
 }
 
 function parseConversationMessage(value: unknown): ConversationMessage[] {
@@ -1889,10 +1878,6 @@ function parseChatToolActivity(value: unknown): ChatToolActivity[] {
   if (!isLocalRecord(value) || typeof value.id !== "string" || typeof value.type !== "string" || typeof value.name !== "string") return [];
   const status = value.status === "completed" || value.status === "failed" || value.status === "in_progress" ? value.status : "completed";
   return [{ id: value.id, type: value.type, name: value.name, status, detail: typeof value.detail === "string" ? value.detail : "" }];
-}
-
-function isReasoningEffort(value: unknown): value is ReasoningEffort {
-  return value === "auto" || value === "none" || value === "low" || value === "medium" || value === "high" || value === "xhigh";
 }
 
 function finiteTimestamp(value: unknown): number | null {
