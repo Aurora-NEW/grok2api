@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - production-v3.1.5-aurora.1
     tags:
       - "v*.*.*"
   pull_request:
@@ -25,6 +26,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Test system instruction proxy
+        run: python3 -m unittest scripts/test_system_instruction_proxy.py
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -60,6 +64,13 @@ jobs:
       - name: Install frontend dependencies
         working-directory: frontend
         run: pnpm install --frozen-lockfile
+
+      - name: Test frontend
+        working-directory: frontend
+        run: pnpm test
+
+      - name: Verify Creative Console customizations
+        run: node scripts/test-creative-console-customizations.mjs
 
       - name: Lint frontend
         working-directory: frontend
