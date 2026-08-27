@@ -1,0 +1,44 @@
+[Unit]
+Description=Grok fixed system instruction injection proxy
+After=network-online.target docker.service
+Wants=network-online.target
+RequiresMountsFor=/root/grok.md
+
+[Service]
+Type=simple
+DynamicUser=yes
+LoadCredential=system-instruction:/root/grok.md
+ExecStart=/usr/bin/python3 /usr/local/libexec/grok-system-instruction-proxy.py --instruction-file %d/system-instruction --listen-host 127.0.0.1 --listen-port 8001 --upstream-host 127.0.0.1 --upstream-port 8000 --max-body-bytes 33554432 --parse-concurrency 1 --upstream-timeout 900
+Restart=on-failure
+RestartSec=2s
+TimeoutStopSec=20s
+Environment=PYTHONUNBUFFERED=1
+UMask=0077
+Nice=5
+
+# Keep a malformed or unusually large request from exhausting the host.
+MemoryHigh=100M
+MemoryMax=160M
+CPUQuota=50%
+TasksMax=48
+LimitNOFILE=256
+
+NoNewPrivileges=yes
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectClock=yes
+ProtectControlGroups=yes
+ProtectHome=yes
+ProtectHostname=yes
+ProtectKernelLogs=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectSystem=strict
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target
