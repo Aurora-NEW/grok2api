@@ -1,0 +1,3 @@
+services:
+  grok2api:
+    container_name: grok2api-v3

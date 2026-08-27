@@ -46,6 +46,7 @@ __pycache__/
 /frontend/*.tsbuildinfo
 
 # Temporary files
+/.worktrees/
 /release/
 /.tmp/
 /tmp/
