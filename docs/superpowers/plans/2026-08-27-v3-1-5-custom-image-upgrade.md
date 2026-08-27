@@ -4,6 +4,8 @@
 
 **Execution constraint:** The user has explicitly disabled subagents for this work. Use `superpowers:executing-plans` inline and stop at every production gate.
 
+**Release revision:** Candidate `v3.1.5-aurora.1` is an immutable failed CI record: verification and both architecture builds passed, but `docker/metadata-action` generated an unintended `latest` tag that broke manifest assembly. Candidate `v3.1.5-aurora.2` disables automatic `latest` generation; all deployment paths below refer to `.2`. The production branch name remains `production-v3.1.5-aurora.1`.
+
 **Goal:** Publish and deploy a pinned `v3.1.5` custom image that preserves production data, injects `/root/grok.md`, hides the DEEIX Chat promotion, and defaults Creative Console to Web Search on, X Search on, and `xhigh` reasoning.
 
 **Architecture:** Start from the immutable upstream `v3.1.5` tag, implement the frontend behavior in source, and retain the existing instruction proxy as an external systemd/Caddy layer. GitHub Actions performs all dependency installation, tests, and image builds; the production host only runs lightweight source tests, pulls the verified image, validates a cloned SQLite database in a resource-limited canary, and recreates one container against the existing named volumes.
@@ -18,6 +20,8 @@
 - Create `frontend/src/features/creative-console/creative-console-defaults.test.ts`: pure regression tests that preserve session payloads while overriding only the three controls.
 - Modify `frontend/src/features/creative-console/creative-console-page.tsx`: consume the defaults in every conversation lifecycle and remove the promotion JSX.
 - Create `scripts/test-creative-console-customizations.mjs`: dependency-free source wiring test runnable on this host's Node 18.
+- Create `scripts/test_ghcr_workflow.py`: guard tag metadata against automatic `latest` collisions.
+- Create `scripts/test_release_metadata.py`: keep verification and backup paths aligned with the current immutable release candidate.
 - Restore `scripts/system_instruction_proxy.py` and `scripts/test_system_instruction_proxy.py`: protocol-aware fixed-instruction proxy and tests.
 - Restore `deploy/grok-system-instruction-proxy.service`, `deploy/grok-system-instruction.caddy`, and `scripts/verify-production-system-instruction.sh`: reproducible deployed proxy configuration and smoke checks.
 - Create `docker-compose.production.yml`: production container name only; no frontend asset bind mounts.
@@ -340,8 +344,8 @@ container="${GROK2API_CONTAINER:-grok2api-v3}"
 base_url="${GROK2API_BASE_URL:-https://grok2api.xiaotianyo.com}"
 config_file="${GROK2API_CONFIG:-/root/grok2api-v3/config.yaml}"
 db_file="${GROK2API_DB:-/var/lib/docker/volumes/grok2api-v3_grok2api-data/_data/backend.db}"
-image_ref_file="${GROK2API_IMAGE_REF_FILE:-/root/backups/grok2api-v3/v3.1.5-aurora.1-image-ref}"
-account_count_file="${GROK2API_ACCOUNT_COUNT_FILE:-/root/backups/grok2api-v3/pre-v3.1.5-aurora.1/account-count}"
+image_ref_file="${GROK2API_IMAGE_REF_FILE:-/root/backups/grok2api-v3/v3.1.5-aurora.2-image-ref}"
+account_count_file="${GROK2API_ACCOUNT_COUNT_FILE:-/root/backups/grok2api-v3/pre-v3.1.5-aurora.2/account-count}"
 
 fail() {
   printf 'FAIL: %s\n' "$*" >&2
@@ -464,7 +468,7 @@ Expected: local tests pass. Do not run `pnpm install`, `pnpm build`, `go test ./
 
 **Files:**
 - Read: `.github/workflows/ghcr-image.yml`
-- Generate outside Git: `/root/backups/grok2api-v3/v3.1.5-aurora.1-image-ref`
+- Generate outside Git: `/root/backups/grok2api-v3/v3.1.5-aurora.2-image-ref`
 
 - [ ] **Step 1: Verify the branch contains only the intended base and custom commits**
 
@@ -491,25 +495,25 @@ If `gh` is unavailable, read the same public Actions run through the GitHub API.
 - [ ] **Step 3: Create and push the immutable custom release tag**
 
 ```bash
-git tag -a v3.1.5-aurora.1 -m "Grok2API v3.1.5 Aurora production release 1"
-git push aurora v3.1.5-aurora.1
+git tag -a v3.1.5-aurora.2 -m "Grok2API v3.1.5 Aurora production release 2"
+git push aurora v3.1.5-aurora.2
 sleep 5
 run_id="$(gh run list --repo Aurora-NEW/grok2api --workflow 'GHCR Image' --commit "$(git rev-parse HEAD)" --event push --limit 1 --json databaseId --jq '.[0].databaseId')"
 test -n "$run_id"
 gh run watch "$run_id" --repo Aurora-NEW/grok2api --exit-status
 ```
 
-Wait for the tag's `GHCR Image` workflow and require every job to pass. If it fails, do not move or reuse the tag; fix the branch and use `v3.1.5-aurora.2` in a revised plan.
+Wait for the tag's `GHCR Image` workflow and require every job to pass. If it fails, do not move or reuse the tag; fix the branch and use `v3.1.5-aurora.3` in a revised plan.
 
 - [ ] **Step 4: Resolve and record the immutable manifest digest**
 
 ```bash
-image="ghcr.io/aurora-new/grok2api:v3.1.5-aurora.1"
+image="ghcr.io/aurora-new/grok2api:v3.1.5-aurora.2"
 digest="$(docker buildx imagetools inspect "$image" | awk '/^Digest:/ {print $2; exit}')"
 test "${digest#sha256:}" != "$digest"
 install -d -m 700 /root/backups/grok2api-v3
-printf '%s@%s\n' "$image" "$digest" | tee /root/backups/grok2api-v3/v3.1.5-aurora.1-image-ref
-chmod 600 /root/backups/grok2api-v3/v3.1.5-aurora.1-image-ref
+printf '%s@%s\n' "$image" "$digest" | tee /root/backups/grok2api-v3/v3.1.5-aurora.2-image-ref
+chmod 600 /root/backups/grok2api-v3/v3.1.5-aurora.2-image-ref
 ```
 
 Expected: the file contains one tag-plus-`sha256` manifest reference and `test` confirms the digest prefix. If GHCR denies anonymous inspection, stop and make the package public or configure read-only GHCR authentication; never place a token in Git.
@@ -520,7 +524,7 @@ Expected: the file contains one tag-plus-`sha256` manifest reference and `test` 
 - Read: `/root/AGENTS.md`
 - Back up: `/var/lib/docker/volumes/grok2api-v3_grok2api-data/_data`
 - Back up: `/root/grok2api-v3/config.yaml`, `/root/grok2api-v3/.env.production`, Compose files, Caddy, and frontend overlays
-- Generate: `/root/backups/grok2api-v3/pre-v3.1.5-aurora.1/`
+- Generate: `/root/backups/grok2api-v3/pre-v3.1.5-aurora.2/`
 
 - [ ] **Step 1: Run the mandatory host and service preflight**
 
@@ -541,12 +545,12 @@ Expected: 2 CPUs, production healthy, required services active, adequate disk, a
 - [ ] **Step 2: Create and validate an online SQLite backup**
 
 ```bash
-test ! -e /root/backups/grok2api-v3/pre-v3.1.5-aurora.1
-install -d -m 700 /root/backups/grok2api-v3/pre-v3.1.5-aurora.1
-sqlite3 /var/lib/docker/volumes/grok2api-v3_grok2api-data/_data/backend.db ".backup '/root/backups/grok2api-v3/pre-v3.1.5-aurora.1/backend.db'"
-chmod 600 /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/backend.db
-sqlite3 /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/backend.db 'PRAGMA integrity_check;'
-sqlite3 /var/lib/docker/volumes/grok2api-v3_grok2api-data/_data/backend.db 'SELECT COUNT(*) FROM provider_accounts;' | tee /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/account-count
+test ! -e /root/backups/grok2api-v3/pre-v3.1.5-aurora.2
+install -d -m 700 /root/backups/grok2api-v3/pre-v3.1.5-aurora.2
+sqlite3 /var/lib/docker/volumes/grok2api-v3_grok2api-data/_data/backend.db ".backup '/root/backups/grok2api-v3/pre-v3.1.5-aurora.2/backend.db'"
+chmod 600 /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/backend.db
+sqlite3 /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/backend.db 'PRAGMA integrity_check;'
+sqlite3 /var/lib/docker/volumes/grok2api-v3_grok2api-data/_data/backend.db 'SELECT COUNT(*) FROM provider_accounts;' | tee /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/account-count
 ```
 
 Expected: integrity check prints `ok`; account count is a positive integer.
@@ -554,13 +558,13 @@ Expected: integrity check prints `ok`; account count is a positive integer.
 - [ ] **Step 3: Back up deployment configuration and construct cloned canary data**
 
 ```bash
-cp -a /root/grok2api-v3/config.yaml /root/grok2api-v3/.env.production /root/grok2api-v3/docker-compose.yml /root/grok2api-v3/docker-compose.production.yml /etc/caddy/Caddyfile /etc/systemd/system/grok-system-instruction-proxy.service /usr/local/libexec/grok-system-instruction-proxy.py /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/
-cp -a /root/grok2api-v3/index.production.html /root/grok2api-v3/frontend.production /root/grok2api-v3/frontend/public/creative-console-chat-defaults-v1.js /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/
-docker inspect grok2api-v3 > /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/grok2api-v3.inspect.json
-install -d -m 700 /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/staging-data /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/canary-quality
-cp -a /var/lib/docker/volumes/grok2api-v3_grok2api-data/_data/. /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/staging-data/
-install -o 10001 -g 10001 -m 600 /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/backend.db /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/staging-data/backend.db
-rm -f /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/staging-data/backend.db-wal /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/staging-data/backend.db-shm
+cp -a /root/grok2api-v3/config.yaml /root/grok2api-v3/.env.production /root/grok2api-v3/docker-compose.yml /root/grok2api-v3/docker-compose.production.yml /etc/caddy/Caddyfile /etc/systemd/system/grok-system-instruction-proxy.service /usr/local/libexec/grok-system-instruction-proxy.py /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/
+cp -a /root/grok2api-v3/index.production.html /root/grok2api-v3/frontend.production /root/grok2api-v3/frontend/public/creative-console-chat-defaults-v1.js /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/
+docker inspect grok2api-v3 > /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/grok2api-v3.inspect.json
+install -d -m 700 /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/staging-data /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/canary-quality
+cp -a /var/lib/docker/volumes/grok2api-v3_grok2api-data/_data/. /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/staging-data/
+install -o 10001 -g 10001 -m 600 /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/backend.db /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/staging-data/backend.db
+rm -f /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/staging-data/backend.db-wal /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/staging-data/backend.db-shm
 ```
 
 Expected: production continues running; only the clone is modified.
@@ -568,9 +572,9 @@ Expected: production continues running; only the clone is modified.
 - [ ] **Step 4: Pull the prebuilt image and start one limited canary**
 
 ```bash
-image_ref="$(tr -d '\r\n' < /root/backups/grok2api-v3/v3.1.5-aurora.1-image-ref)"
+image_ref="$(tr -d '\r\n' < /root/backups/grok2api-v3/v3.1.5-aurora.2-image-ref)"
 docker pull "$image_ref"
-docker run -d --name grok2api-v315-canary --memory=192m --memory-swap=384m --cpus=0.5 --pids-limit=128 --init -p 127.0.0.1:18000:8000 -e TZ=Asia/Shanghai -v /root/grok2api-v3/config.yaml:/run/grok2api/config.yaml:ro -v /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/staging-data:/app/data -v /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/canary-quality:/var/lib/grok2api-quality-guard "$image_ref"
+docker run -d --name grok2api-v315-canary --memory=192m --memory-swap=384m --cpus=0.5 --pids-limit=128 --init -p 127.0.0.1:18000:8000 -e TZ=Asia/Shanghai -v /root/grok2api-v3/config.yaml:/run/grok2api/config.yaml:ro -v /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/staging-data:/app/data -v /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/canary-quality:/var/lib/grok2api-quality-guard "$image_ref"
 for attempt in $(seq 1 60); do
   health="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' grok2api-v315-canary)"
   [[ "$health" == "healthy" ]] && break
@@ -592,7 +596,7 @@ Expected: the canary becomes healthy within 120 seconds. Stop immediately if the
 curl --silent --show-error --fail http://127.0.0.1:18000/healthz
 docker exec grok2api-v315-canary cat /app/VERSION
 docker exec grok2api-v315-canary sh -c "! grep -R -F -q 'https://github.com/DEEIX-AI/DEEIX-Chat' /app/frontend/dist"
-test "$(sqlite3 /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/staging-data/backend.db 'SELECT COUNT(*) FROM provider_accounts;')" = "$(cat /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/account-count)"
+test "$(sqlite3 /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/staging-data/backend.db 'SELECT COUNT(*) FROM provider_accounts;')" = "$(cat /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/account-count)"
 docker logs --since 5m grok2api-v315-canary
 docker inspect --format '{{.State.Health.Status}}' grok2api-v3
 ```
@@ -603,7 +607,7 @@ Expected: canary and production are healthy, version is `v3.1.5`, promotion link
 
 ```bash
 docker rm -f grok2api-v315-canary
-sqlite3 /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/staging-data/backend.db 'PRAGMA integrity_check;'
+sqlite3 /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/staging-data/backend.db 'PRAGMA integrity_check;'
 docker inspect --format '{{.State.Health.Status}}' grok2api-v3
 ```
 
@@ -624,8 +628,8 @@ From `/root`, verify both worktrees are clean and the release tag points at the 
 git -C /root/grok2api-v3/.worktrees/v3-1-5-aurora status --short
 git -C /root/grok2api-v3 status --short
 git -C /root/grok2api-v3 rev-parse production-v3.1.5-aurora.1
-git -C /root/grok2api-v3 rev-parse v3.1.5-aurora.1
-test "$(git -C /root/grok2api-v3 rev-parse production-v3.1.5-aurora.1)" = "$(git -C /root/grok2api-v3 rev-parse v3.1.5-aurora.1)"
+git -C /root/grok2api-v3 rev-parse v3.1.5-aurora.2
+test "$(git -C /root/grok2api-v3 rev-parse production-v3.1.5-aurora.1)" = "$(git -C /root/grok2api-v3 rev-parse v3.1.5-aurora.2)"
 git -C /root/grok2api-v3 worktree remove /root/grok2api-v3/.worktrees/v3-1-5-aurora
 git -C /root/grok2api-v3 switch production-v3.1.5-aurora.1
 ```
@@ -634,7 +638,7 @@ Expected: the two revisions match. Leave the separate `feature/console-capacity-
 
 - [ ] **Step 2: Pin the recorded image and replace the obsolete Caddy cache rule**
 
-Use `apply_patch` to replace the value after `GROK2API_IMAGE=` in `/root/grok2api-v3/.env.production` with the exact image reference stored in `/root/backups/grok2api-v3/v3.1.5-aurora.1-image-ref`. Preserve the `GROK2API_IMAGE=` key.
+Use `apply_patch` to replace the value after `GROK2API_IMAGE=` in `/root/grok2api-v3/.env.production` with the exact image reference stored in `/root/backups/grok2api-v3/v3.1.5-aurora.2-image-ref`. Preserve the `GROK2API_IMAGE=` key.
 
 Use `apply_patch` on `/etc/caddy/Caddyfile` to replace:
 
@@ -699,7 +703,7 @@ Expected: all services active and public health succeeds.
 
 **Files:**
 - Run: `scripts/verify-production-custom-release.sh`
-- Generate: `/root/backups/grok2api-v3/pre-v3.1.5-aurora.1/stream-smoke.log`
+- Generate: `/root/backups/grok2api-v3/pre-v3.1.5-aurora.2/stream-smoke.log`
 
 - [ ] **Step 1: Run the complete production verification script**
 
@@ -722,8 +726,8 @@ models_json="$(curl --silent --show-error --fail -H "Authorization: Bearer $acti
 model="$(jq -r '([.data[].id | select(. == "grok-chat-fast")][0] // [.data[].id | select(test("imagine|voice|stt|tts"; "i") | not)][0] // empty)' <<< "$models_json")"
 test -n "$model"
 payload="$(jq -nc --arg model "$model" '{model:$model,input:[{role:"user",content:"Use web search and X search, then answer with one short sentence."}],stream:true,store:false,reasoning:{effort:"xhigh",summary:"auto"},tools:[{type:"web_search"},{type:"x_search"}]}')"
-stream_log=/root/backups/grok2api-v3/pre-v3.1.5-aurora.1/stream-smoke.log
-header_log=/root/backups/grok2api-v3/pre-v3.1.5-aurora.1/stream-smoke.headers
+stream_log=/root/backups/grok2api-v3/pre-v3.1.5-aurora.2/stream-smoke.log
+header_log=/root/backups/grok2api-v3/pre-v3.1.5-aurora.2/stream-smoke.headers
 curl --no-buffer --silent --show-error --fail-with-body --max-time 240 -D "$header_log" -H "Authorization: Bearer $active_key" -H 'Content-Type: application/json' --data-binary "$payload" https://grok2api.xiaotianyo.com/v1/responses | awk '{ print strftime("%Y-%m-%dT%H:%M:%S%z"), $0; fflush(); }' > "$stream_log"
 chmod 600 "$stream_log" "$header_log"
 rg -q 'response\.(completed|incomplete)' "$stream_log"
@@ -766,7 +770,7 @@ Expected: no restart loop, panic, migration error, sustained memory pressure, or
 ### Task 10: Roll Back Atomically If A Critical Gate Fails
 
 **Files:**
-- Restore: `/root/backups/grok2api-v3/pre-v3.1.5-aurora.1/backend.db`
+- Restore: `/root/backups/grok2api-v3/pre-v3.1.5-aurora.2/backend.db`
 - Restore: saved `.env.production` and `Caddyfile`
 - Switch: `production-migration-20260814`
 
@@ -781,7 +785,7 @@ docker compose -p grok2api-v3 -f docker-compose.yml -f docker-compose.production
 
 ```bash
 rm -f /var/lib/docker/volumes/grok2api-v3_grok2api-data/_data/backend.db-wal /var/lib/docker/volumes/grok2api-v3_grok2api-data/_data/backend.db-shm
-install -o 10001 -g 10001 -m 600 /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/backend.db /var/lib/docker/volumes/grok2api-v3_grok2api-data/_data/backend.db
+install -o 10001 -g 10001 -m 600 /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/backend.db /var/lib/docker/volumes/grok2api-v3_grok2api-data/_data/backend.db
 sqlite3 /var/lib/docker/volumes/grok2api-v3_grok2api-data/_data/backend.db 'PRAGMA integrity_check;'
 ```
 
@@ -791,8 +795,8 @@ Expected: `ok`. This intentionally discards Grok2API writes made after cutover; 
 
 ```bash
 git -C /root/grok2api-v3 switch production-migration-20260814
-install -m 600 /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/.env.production /root/grok2api-v3/.env.production
-install -m 644 /root/backups/grok2api-v3/pre-v3.1.5-aurora.1/Caddyfile /etc/caddy/Caddyfile
+install -m 600 /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/.env.production /root/grok2api-v3/.env.production
+install -m 644 /root/backups/grok2api-v3/pre-v3.1.5-aurora.2/Caddyfile /etc/caddy/Caddyfile
 cd /root/grok2api-v3
 docker compose -p grok2api-v3 -f docker-compose.yml -f docker-compose.production.yml --env-file .env.production up -d --no-deps --force-recreate grok2api
 ```
@@ -819,13 +823,13 @@ Expected: old digest `sha256:5bc81cebbf941a44009927ba880b9a25d983aaeb41f6833ee7d
 Write the non-secret deployment record, then use it as the source for the user-facing summary:
 
 ```bash
-record=/root/backups/grok2api-v3/pre-v3.1.5-aurora.1/deployed-state.txt
+record=/root/backups/grok2api-v3/pre-v3.1.5-aurora.2/deployed-state.txt
 {
   git -C /root/grok2api-v3 rev-parse HEAD
   git -C /root/grok2api-v3 describe --tags --exact-match HEAD
-  tr -d '\r\n' < /root/backups/grok2api-v3/v3.1.5-aurora.1-image-ref
+  tr -d '\r\n' < /root/backups/grok2api-v3/v3.1.5-aurora.2-image-ref
   printf '\n'
-  docker image inspect --format '{{.Id}}' "$(tr -d '\r\n' < /root/backups/grok2api-v3/v3.1.5-aurora.1-image-ref)"
+  docker image inspect --format '{{.Id}}' "$(tr -d '\r\n' < /root/backups/grok2api-v3/v3.1.5-aurora.2-image-ref)"
   docker inspect --format '{{.Image}} {{.State.Health.Status}}' grok2api-v3
   sqlite3 /var/lib/docker/volumes/grok2api-v3_grok2api-data/_data/backend.db 'PRAGMA integrity_check; SELECT COUNT(*) FROM provider_accounts;'
   systemctl is-active caddy grok-search grok-system-instruction-proxy

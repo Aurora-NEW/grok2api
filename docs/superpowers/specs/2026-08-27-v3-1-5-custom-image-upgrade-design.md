@@ -7,9 +7,14 @@ release. Build a custom image from a clean `v3.1.5` branch in GitHub Actions and
 deploy that image by immutable digest. The production host must not compile the
 frontend, backend, dependencies, or container image.
 
-The custom release is named `v3.1.5-aurora.1`. It carries only the approved
+The custom release is named `v3.1.5-aurora.2`. It carries only the approved
 production behavior and reproducible deployment assets. It does not merge the
 old production branch wholesale.
+
+Release candidate `.1` is retained as a failed CI record. Its architecture
+images passed, but automatic `latest` metadata collided with tag manifest
+assembly. Candidate `.2` disables automatic `latest` generation and keeps the
+explicit `latest` tag restricted to pushes on `main`.
 
 ## Goals
 
@@ -102,7 +107,7 @@ multi-architecture Docker build. No equivalent full build runs on the
 production host.
 
 Publish the result from the Aurora fork as
-`ghcr.io/aurora-new/grok2api:v3.1.5-aurora.1`. Before deployment, resolve the
+`ghcr.io/aurora-new/grok2api:v3.1.5-aurora.2`. Before deployment, resolve the
 amd64 image to a digest and pin that digest in production. Do not deploy a
 mutable `latest` tag.
 

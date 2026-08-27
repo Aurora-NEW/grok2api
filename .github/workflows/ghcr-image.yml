@@ -27,8 +27,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Test system instruction proxy
-        run: python3 -m unittest scripts/test_system_instruction_proxy.py
+      - name: Test operational scripts
+        run: |
+          python3 -m unittest scripts/test_system_instruction_proxy.py
+          python3 -m unittest scripts/test_ghcr_workflow.py
+          python3 -m unittest scripts/test_release_metadata.py
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -152,6 +155,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ steps.image.outputs.name }}
+          flavor: latest=false
           tags: |
             type=ref,event=branch,suffix=-${{ matrix.arch }}
             type=ref,event=tag,suffix=-${{ matrix.arch }}
@@ -204,6 +208,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ steps.image.outputs.name }}
+          flavor: latest=false
           tags: |
             type=ref,event=branch
             type=ref,event=tag
