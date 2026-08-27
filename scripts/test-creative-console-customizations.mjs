@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const pageURL = new URL("../frontend/src/features/creative-console/creative-console-page.tsx", import.meta.url);
+const defaultsURL = new URL("../frontend/src/features/creative-console/creative-console-defaults.ts", import.meta.url);
 const source = readFileSync(pageURL, "utf8");
+const defaultsSource = readFileSync(defaultsURL, "utf8");
 
 function section(startMarker, endMarker) {
   const start = source.indexOf(startMarker);
@@ -16,6 +18,8 @@ assert.doesNotMatch(source, /DEEIX Chat|DEEIX-AI\/DEEIX-Chat/);
 assert.match(source, /from "@\/features\/creative-console\/creative-console-defaults"/);
 assert.match(source, /grok2api:creative-console:chat-history:/);
 assert.match(source, /grok-4\.20-0309-reasoning/);
+assert.match(defaultsSource, /grok-4\.20-multi-agent-0309/);
+assert.match(source, /selectDefaultCreativeChatModel\(modelGroups\.chat\)/);
 
 const clearConversation = section("function clearConversation(): void {", "function startNewConversation(): void {");
 assert.match(clearConversation, /setReasoningEffort\(blank\.reasoningEffort\)/);

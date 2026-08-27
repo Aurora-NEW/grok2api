@@ -8,11 +8,12 @@ WORKFLOW = ROOT / ".github" / "workflows" / "ghcr-image.yml"
 
 
 class ReleaseMetadataTests(unittest.TestCase):
-    def test_production_verifier_uses_second_release_candidate(self) -> None:
+    def test_production_verifier_uses_third_release_candidate(self) -> None:
         source = VERIFY_SCRIPT.read_text(encoding="utf-8")
 
-        self.assertIn("/v3.1.5-aurora.2-image-ref", source)
-        self.assertIn("/pre-v3.1.5-aurora.2/account-count", source)
+        self.assertIn("/v3.1.5-aurora.3-image-ref", source)
+        self.assertIn("/pre-v3.1.5-aurora.3/account-count", source)
+        self.assertNotIn("v3.1.5-aurora.2", source)
         self.assertNotIn("v3.1.5-aurora.1", source)
 
     def test_workflow_runs_release_metadata_test(self) -> None:

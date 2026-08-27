@@ -5,8 +5,8 @@ container="${GROK2API_CONTAINER:-grok2api-v3}"
 base_url="${GROK2API_BASE_URL:-https://grok2api.xiaotianyo.com}"
 config_file="${GROK2API_CONFIG:-/root/grok2api-v3/config.yaml}"
 db_file="${GROK2API_DB:-/var/lib/docker/volumes/grok2api-v3_grok2api-data/_data/backend.db}"
-image_ref_file="${GROK2API_IMAGE_REF_FILE:-/root/backups/grok2api-v3/v3.1.5-aurora.2-image-ref}"
-account_count_file="${GROK2API_ACCOUNT_COUNT_FILE:-/root/backups/grok2api-v3/pre-v3.1.5-aurora.2/account-count}"
+image_ref_file="${GROK2API_IMAGE_REF_FILE:-/root/backups/grok2api-v3/v3.1.5-aurora.3-image-ref}"
+account_count_file="${GROK2API_ACCOUNT_COUNT_FILE:-/root/backups/grok2api-v3/pre-v3.1.5-aurora.3/account-count}"
 
 fail() {
   printf 'FAIL: %s\n' "$*" >&2

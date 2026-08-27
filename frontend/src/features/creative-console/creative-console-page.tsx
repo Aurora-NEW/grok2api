@@ -39,7 +39,7 @@ import {
   type VideoStatus,
   type VoiceInfo,
 } from "@/features/creative-console/creative-console-api";
-import { createCreativeChatDefaults, withCreativeChatDefaults } from "@/features/creative-console/creative-console-defaults";
+import { createCreativeChatDefaults, selectDefaultCreativeChatModel, withCreativeChatDefaults } from "@/features/creative-console/creative-console-defaults";
 import { getClientKeySecret, listClientKeys, type ClientKeyDTO } from "@/features/client-keys/client-keys-api";
 import { importVideoInputFromURL, uploadMediaInput } from "@/features/media/media-api";
 import { PageHeader } from "@/shared/components/page-header";
@@ -143,7 +143,7 @@ export function CreativeConsolePage() {
   }), [permittedModels]);
   const voiceModelChoices = useMemo(() => uniqueModelsByPublicID(modelGroups.voice), [modelGroups.voice]);
   const effectiveModels = useMemo<Record<CreativeMode, string>>(() => ({
-    chat: modelGroups.chat.some((model) => model.publicId === selectedModels.chat) ? selectedModels.chat : modelGroups.chat[0]?.publicId ?? "",
+    chat: modelGroups.chat.some((model) => model.publicId === selectedModels.chat) ? selectedModels.chat : selectDefaultCreativeChatModel(modelGroups.chat),
     image: modelGroups.image.some((model) => model.publicId === selectedModels.image) ? selectedModels.image : modelGroups.image[0]?.publicId ?? "",
     video: modelGroups.video.some((model) => model.publicId === selectedModels.video) ? selectedModels.video : modelGroups.video[0]?.publicId ?? "",
     voice: voiceModelChoices.some((model) => model.publicId === selectedModels.voice) ? selectedModels.voice : voiceModelChoices[0]?.publicId ?? "",
