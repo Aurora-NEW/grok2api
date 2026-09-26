@@ -10,10 +10,6 @@
   <a href="./README.md">English</a> | 简体中文
 </p>
 
-> [!NOTE]
-> 本 Fork 由 [Aurora-NEW](https://github.com/Aurora-NEW) 维护，默认分支为 `production-v3.1.5-aurora.1`。
-> 基于 [chenyme/grok2api](https://github.com/chenyme/grok2api)，感谢上游作者及所有贡献者。
-
 <p align="center">
   <a href="./backend/go.mod"><img alt="Go" src="https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white" /></a>
   <a href="./frontend/package.json"><img alt="React" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111827" /></a>

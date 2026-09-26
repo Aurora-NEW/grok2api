@@ -10,10 +10,6 @@
   English | <a href="./README.zh-CN.md">简体中文</a>
 </p>
 
-> [!NOTE]
-> This fork is maintained by [Aurora-NEW](https://github.com/Aurora-NEW). The default branch is `production-v3.1.5-aurora.1`.
-> Based on [chenyme/grok2api](https://github.com/chenyme/grok2api), with credit to the upstream author and contributors.
-
 <p align="center">
   <a href="./backend/go.mod"><img alt="Go" src="https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white" /></a>
   <a href="./frontend/package.json"><img alt="React" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111827" /></a>
